@@ -64,3 +64,23 @@ This architecture demonstrates CDN mechanisms but does not provide geographicall
 ## Planned Performance Testing
 
 Python scripts will measure response time, cache hit ratio, origin request reduction, and request distribution under controlled workloads.
+
+## Edge Caching Strategy
+
+Each edge maintains an independent Nginx disk cache.
+
+Configuration:
+- Cache directory: `/var/cache/nginx/cdn`
+- Freshness TTL for HTTP 200 responses: 5 minutes
+- Target disk cache size: 100 MB per edge
+- Inactive entry retention: 10 minutes
+- Cache eviction: Nginx cache-manager LRU behavior
+
+Responses expose `X-Edge-Server` and `X-Cache-Status`
+headers for troubleshooting and performance evaluation.
+
+Requests containing `X-Bypass-Cache: 1` bypass the existing
+cache and prevent the returned response from being stored.
+
+The bypass header is intended for controlled experiments,
+not as a production-ready public cache-control policy.
