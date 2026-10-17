@@ -32,7 +32,20 @@ See [Architecture Documentation](docs/architecture.md) for details.
 
 ## Project Status
 
-**In development.** Infrastructure configuration and performance benchmarks have not yet been implemented.
+**In development — Day 3 completed.**
+
+Implemented and locally verified:
+- Five-container CDN architecture using Docker Compose.
+- Nginx reverse proxy and load balancing.
+- Independent edge caching with HIT/MISS tracking.
+- Cache TTL, expiration, and LRU-based eviction configuration.
+- Cache bypass using a request header.
+
+Upcoming:
+- Python network latency simulation.
+- Fault tolerance and load testing.
+- AWS EC2 deployment.
+- Performance benchmarking and measured results.
 
 ## Deployment Scope
 
@@ -41,4 +54,24 @@ The simulator runs multiple containers on one host. Geographic network latency i
 ## Performance Evaluation
 
 Planned metrics include response latency, cache hit ratio, origin request reduction, and load distribution. Results will be added after testing.
+
+## Edge Caching Strategy
+
+Each edge maintains an independent Nginx disk cache.
+
+Configuration:
+- Cache directory: `/var/cache/nginx/cdn`
+- Freshness TTL for HTTP 200 responses: 5 minutes
+- Target disk cache size: 100 MB per edge
+- Inactive entry retention: 10 minutes
+- Cache eviction: Nginx cache-manager LRU behavior
+
+Responses expose `X-Edge-Server` and `X-Cache-Status`
+headers for troubleshooting and performance evaluation.
+
+Requests containing `X-Bypass-Cache: 1` bypass the existing
+cache and prevent the returned response from being stored.
+
+The bypass header is intended for controlled experiments,
+not as a production-ready public cache-control policy.
   
