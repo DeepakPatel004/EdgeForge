@@ -75,5 +75,16 @@ cache and prevent the returned response from being stored.
 The bypass header is intended for controlled experiments,
 not as a production-ready public cache-control policy.
 
+**Preliminary local performance results**
 
-  
+Using `127.0.0.1:8080`, an initial benchmark with 10 verified HIT and 10 verified BYPASS samples measured:
+
+- Average Cache HIT latency: **19.492 ms**
+- Average Cache BYPASS latency: **43.565 ms**
+- Observed reduction in average response time: **55.26%**
+
+A subsequent run reported a **56.71% reduction**, suggesting a similar relative improvement under that test, although the complete timing details were not retained.
+
+These are preliminary local measurements, not final benchmark claims. The earlier high timings obtained through `localhost` improved substantially after changing the endpoint to `127.0.0.1`. The precise cause has not been confirmed.
+
+Final reproducible performance results will be collected on Day 7.
