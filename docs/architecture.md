@@ -48,6 +48,25 @@ The simulator uses five Nginx containers managed by Docker Compose.
 6. Cacheable content is stored according to configured rules.
 7. The response returns to the client.
 
+### Cache fill coordination and origin failure
+
+Each edge uses `proxy_cache_lock on` to coordinate new fills for the same key.
+Waiting requests can reuse the completed entry. Locks are local to each edge;
+three independent cold caches can still make three origin fetches. Default
+five-second lock timeout/age limits permit additional fetches for slow fills.
+
+For an expired entry still on disk, `proxy_cache_use_stale` permits fallback on
+connection errors, timeouts, and HTTP 500/502/503/504. The response reports
+`X-Cache-Status: STALE`. Cold, evicted, and bypassed requests may fail. The
+two-second edge connect timeout enables fallback before the load balancer's
+five-second read timeout. An established but stalled origin response can still
+outlast that load balancer timeout. A healthy origin fetch refreshes the entry.
+No separate stale age limit is configured;
+the existing TTL, inactivity, LRU, and bypass rules remain in effect.
+
+The five-container topology and fixed 16-hour roadmap are unchanged. See
+[local validation steps](../README.MD#local-validation-windows-powershell).
+
 ## Networking
 
 - Client-facing host port: 8080.
