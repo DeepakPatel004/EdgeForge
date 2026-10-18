@@ -84,3 +84,20 @@ cache and prevent the returned response from being stored.
 
 The bypass header is intended for controlled experiments,
 not as a production-ready public cache-control policy.
+
+## Python Latency Simulator
+
+The simulator is implemented in `simulator/latency_test.py`.
+
+**Measurement flow:**
+
+1. Python sends an HTTP request to the local Nginx load balancer.
+2. The load balancer forwards the request to an edge server.
+3. The edge serves a cached response or forwards the request to the origin.
+4. Python reads the complete response and records the elapsed duration.
+5. The simulator records the serving edge and cache status.
+6. For regional simulations, Python adds a configured artificial delay.
+
+**Cache comparison:** The benchmark warms the caches, alternates HIT and BYPASS requests, validates the returned cache statuses, and calculates their average durations.
+
+**Limitations:** The delay profiles are simulated, not actual geographical measurements. All CDN containers currently share one Docker host. Earlier Python measurements showed unexpectedly high durations compared with a separate curl test; their cause has not been established.
