@@ -1,7 +1,9 @@
 
-# CDN Simulator
+# EdgeForge — CDN Simulator
 
 A containerized Content Delivery Network (CDN) simulator designed to demonstrate HTTP load balancing, edge caching, network latency simulation, and fault tolerance.
+
+Explore the [architecture](#architecture), [cache behavior](#cache-locking-and-stale-fallback), and [validation steps](#local-validation-windows-powershell).
 
 ## Project Objectives
 
@@ -24,15 +26,30 @@ A containerized Content Delivery Network (CDN) simulator designed to demonstrate
 
 ## Architecture
 
-Client → Nginx Load Balancer → 3 Caching Edge Servers → Origin Server
+![Logical CDN architecture: a client sends HTTP requests through an Nginx load balancer to three independent caching edges; cache misses and refreshes reach the origin.](docs/images/cdn-architecture.png)
 
-Each edge server maintains its own cache and contacts the origin when necessary.
+The load balancer selects an edge for each request. A cache **HIT** is served
+by that edge; a **MISS** fetches from the origin and stores an eligible response.
+Each edge maintains its own cache, so warming one edge does not warm the others.
 
 See [Architecture Documentation](docs/architecture.md) for details.
 
+## Run locally
+
+With Docker Compose and Python available, run from the project directory:
+
+```powershell
+docker compose up -d
+curl.exe -i http://127.0.0.1:8080/
+python simulator/load_test.py
+```
+
+Inspect `X-Edge-Server` to identify the serving edge and `X-Cache-Status` to
+see whether the response used its cache.
+
 ## Project Status
 
-**In development — Day 3 completed.**
+**In development — edge caching and origin-failure fallback locally verified.**
 
 Implemented and locally verified:
 - Five-container CDN architecture using Docker Compose.
@@ -40,20 +57,24 @@ Implemented and locally verified:
 - Independent edge caching with HIT/MISS tracking.
 - Cache TTL, expiration, and LRU-based eviction configuration.
 - Cache bypass using a request header.
+- Cache locking and stale fallback on eligible origin failures.
+- Python latency comparison and concurrent load testing.
 
 Upcoming:
-- Python network latency simulation.
-- Fault tolerance and load testing.
 - AWS EC2 deployment.
 - Performance benchmarking and measured results.
 
 ## Deployment Scope
 
-The simulator runs multiple containers on one host. Geographic network latency is simulated, not measured across real distributed edge locations.
+The diagram describes the logical CDN request flow. Docker Compose provides a
+cost-conscious development setup; geographic latency is simulated rather than
+measured across deployed edge locations.
 
 ## Performance Evaluation
 
-Planned metrics include response latency, cache hit ratio, origin request reduction, and load distribution. Results will be added after testing.
+The existing Python scripts report response latency, cache hit ratio, and
+request distribution. Cache-resilience validation is recorded below; final
+performance benchmarking remains planned.
 
 ## Edge Caching Strategy
 
@@ -77,6 +98,10 @@ not as a production-ready public cache-control policy.
 
 ### Cache locking and stale fallback
 
+![Cache locking coordinates requests for one uncached key at the selected edge; stale fallback serves a retained expired response after an eligible origin failure. Cold or bypassed requests can still fail.](docs/images/cache-resilience.png)
+
+#### 1. Cache stampede protection
+
 The shared edge configuration enables `proxy_cache_lock on;`. For concurrent
 requests for the same uncached key, one request populates that edge's cache;
 others wait and can reuse the stored response instead of duplicating origin
@@ -86,6 +111,8 @@ default `proxy_cache_lock_timeout 5s`, a waiter that times out fetches from the
 origin and does not cache its response. The default `proxy_cache_lock_age 5s`
 also permits another origin request if the initial fill is still unfinished.
 Locking therefore reduces duplicate fetches without guaranteeing one fetch.
+
+#### 2. Stale content on origin failure
 
 `proxy_cache_use_stale error timeout http_500 http_502 http_503 http_504;`
 allows an eligible expired entry to be served with `X-Cache-Status: STALE`
